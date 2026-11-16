@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import VideoPlayer from './VideoPlayer';
+import VideoPlayer, { type VideoPlayerHandle } from './VideoPlayer';
+import MediaIcon from './MediaIcon';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,10 @@ export default function ImageOverlay({ images, filePaths, index, onClose, onNavi
   const src     = index !== null ? images[index]    : null;
   const fp      = index !== null ? filePaths[index] : null;
   const isVideo = src ? isVideoSrc(src) : false;
+  const videoPlayer = useRef<VideoPlayerHandle>(null);
+  const [externalOpening, setExternalOpening] = useState(false);
+  const [externalError, setExternalError] = useState('');
+  const externalRequest = useRef(0);
 
   // ── zoom / pan ───────────────────────────────────────────────────────────────
   const [zoom, setZoom] = useState(1);
@@ -47,6 +52,9 @@ export default function ImageOverlay({ images, filePaths, index, onClose, onNavi
 
   // reset whenever slide changes (index changes, incl. open/close)
   useEffect(() => {
+    externalRequest.current += 1;
+    setExternalOpening(false);
+    setExternalError('');
     setZoom(1);
     setPan({ x: 0, y: 0 });
     zoomRef.current = 1;
@@ -54,6 +62,21 @@ export default function ImageOverlay({ images, filePaths, index, onClose, onNavi
     dragging.current = false;
     didDrag.current  = false;
   }, [index]);
+
+  const openExternal = async () => {
+    if (!fp || externalOpening) return;
+    const current = ++externalRequest.current;
+    setExternalOpening(true);
+    setExternalError('');
+    try {
+      await videoPlayer.current?.pause();
+      await window.moodframe.openWithDefaultApp(fp);
+    } catch (error) {
+      if (externalRequest.current === current) setExternalError(String(error));
+    } finally {
+      if (externalRequest.current === current) setExternalOpening(false);
+    }
+  };
 
   // ── navigation ───────────────────────────────────────────────────────────────
   const handlePrev = useCallback(() => {
@@ -201,7 +224,7 @@ export default function ImageOverlay({ images, filePaths, index, onClose, onNavi
             style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             {isVideo ? (
-              <VideoPlayer filePath={fp!} onClose={onClose} />
+              <VideoPlayer ref={videoPlayer} filePath={fp!} onClose={onClose} />
             ) : (
               <div style={{
                 position: 'relative',
@@ -300,6 +323,15 @@ export default function ImageOverlay({ images, filePaths, index, onClose, onNavi
                   <line x1="1.5" y1="7" x2="12.5" y2="7"/>
                 </svg>
               </ZoomBtn>
+            </div>
+          )}
+
+          {isVideo && fp && (
+            <div className="media-external-action" onClick={(event) => event.stopPropagation()}>
+              {externalError && <div className="media-external-error" role="alert">{externalError}</div>}
+              <button type="button" className="media-external-button" aria-label="Open with video player" title="Open in your default media player" disabled={externalOpening} onClick={() => void openExternal()}>
+                <MediaIcon name="external" />{externalOpening ? 'Opening…' : 'Open with video player'}
+              </button>
             </div>
           )}
 

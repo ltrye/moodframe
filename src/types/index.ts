@@ -65,6 +65,7 @@ export interface MoodframeAPI {
 
   openFolderDialog: () => Promise<string | null>;
   openImageDialog: () => Promise<string | null>;
+  openWithDefaultApp: (filePath: string) => Promise<void>;
   readImageFiles: (folderPath: string) => Promise<string[]>;
   readSidecar: (folderPath: string) => Promise<string[]>;
   writeSidecar: (folderPath: string, order: string[]) => Promise<void>;

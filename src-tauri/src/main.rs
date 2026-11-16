@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod core;
+mod external_player;
 mod player;
 mod state;
 mod thumbnails;
@@ -361,6 +362,10 @@ fn dispatch(app: &tauri::AppHandle, state: &State, action: &str, args: &Value) -
                 Ok(()) => json!({"ok":true}),
                 Err(error) => json!({"ok":false,"error":error}),
             })
+        }
+        "openWithDefaultApp" => {
+            external_player::open(state, string(args, "filePath")?)?;
+            Ok(Value::Null)
         }
         "openVideo" | "closeVideo" | "ackVideo" | "controlVideo" => {
             player::dispatch(app, state, &window, action, args)

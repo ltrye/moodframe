@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
 
 test('Tauri controls render binary frames, accept input, and close cleanly', async ({ page }) => {
-  const errors: string[] = []; page.on('pageerror', (error) => errors.push(error.message));
+  const errors: string[] = []; page.on('pageerror', (error) => { errors.push(error.message); console.error('Player harness:', error.message); });
   await page.goto('/tests/player.html');
   await expect(page.getByRole('button', { name: 'Play (Space)', exact: true })).toBeEnabled();
   await expect(page.getByRole('status')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: /Open.*player/i })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Open with video player' })).toBeVisible();
   await page.getByRole('button', { name: 'Play (Space)', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pause (Space)' })).toBeVisible();
   await page.getByRole('button', { name: 'Next frame (Right)' }).click();
@@ -65,4 +65,31 @@ test('media errors stay in the Tauri overlay', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Play (Space)', exact: true })).toBeEnabled();
   await page.evaluate(() => (window as any).mediaTest.error('Unsupported test codec'));
   await expect(page.getByRole('alert')).toHaveText('Unsupported test codec');
+});
+
+test('external player button stays bottom-right, pauses playback, and reports launch errors', async ({ page }) => {
+  await page.goto('/tests/player.html');
+  const play = page.getByRole('button', { name: 'Play (Space)', exact: true });
+  const external = page.getByRole('button', { name: 'Open with video player' });
+  await expect(play).toBeEnabled();
+  await play.click();
+  await expect(page.getByRole('button', { name: 'Pause (Space)' })).toBeVisible();
+  await external.click();
+  await expect(play).toBeVisible();
+  await expect(external).toBeEnabled();
+  const commands = await page.evaluate(() => (window as any).mediaTest.commands.filter((c: any) => ['controlVideo', 'openWithDefaultApp'].includes(c.action)));
+  expect(commands.slice(-2).map((c: any) => c.control ?? c.action)).toEqual(['pause', 'openWithDefaultApp']);
+  expect(commands.at(-1).filePath).toBe('D:/reference.mp4');
+  await expect(page.getByRole('region', { name: 'Video player' })).toBeVisible();
+  for (const viewport of [{ width: 1280, height: 900 }, { width: 720, height: 600 }]) {
+    await page.setViewportSize(viewport);
+    const box = (await external.boundingBox())!;
+    expect(Math.abs(viewport.width - box.x - box.width - 24)).toBeLessThanOrEqual(1);
+    expect(Math.abs(viewport.height - box.y - box.height - 24)).toBeLessThanOrEqual(1);
+  }
+  await page.evaluate(() => { (window as any).mediaTest.error('Embedded playback unavailable'); (window as any).mediaTest.failExternal('No default video player is configured'); });
+  await external.click();
+  await expect(page.getByText('Error: No default video player is configured', { exact: true })).toBeVisible();
+  await expect(external).toBeEnabled();
+  await expect(page.getByRole('region', { name: 'Video player' })).toBeVisible();
 });

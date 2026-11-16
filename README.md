@@ -6,11 +6,11 @@ Browse images and videos as Pinterest-style boards, reorder cards, move media be
 
 ## Video player
 
-The player is entirely inside the **Tauri WebView**: React controls, timeline, keyboard shortcuts and a WebGL2 canvas. It reuses the actual FrameViewer FFmpeg decoder, bounded YUV frame cache, prefetch, frame stepping and scrub audio through a **windowless C++ media backend**. No Qt Quick/QML controls, native child window, HWND parenting, or external-player buttons are used.
+The player is entirely inside the **Tauri WebView**: React controls, timeline, keyboard shortcuts and a WebGL2 canvas. It reuses the actual FrameViewer FFmpeg decoder, bounded YUV frame cache, prefetch, frame stepping and scrub audio through a **windowless C++ media backend**. No Qt Quick/QML controls, native child window, or HWND parenting are used.
 
 The backend still bundles Qt Core/Gui/Multimedia because the reused code uses Qt data types, images, timers and audio. Qt does not provide the player UI. Rust launches `media/MoodframeMedia.exe` without a console or GUI window, validates its versioned binary protocol, and sends frames to React through raw Tauri channels. No image base64 or JPEG encoding occurs during playback.
 
-All visual controls belong to React. Space toggles playback, Left/Right step frames, right-drag scrubs, F11 toggles Moodframe fullscreen, and Escape closes the overlay. Seeking preserves playing/paused state. Closing releases the clip and browser texture cache; the empty backend stays warm for up to 30 seconds, then exits.
+All visual controls belong to React. Space toggles playback, Left/Right step frames, right-drag scrubs, F11 toggles Moodframe fullscreen, and Escape closes the overlay. The bottom-right **Open with video player** button pauses embedded playback and opens the video in the Windows default media player. Seeking preserves playing/paused state. Closing releases the clip and browser texture cache; the empty backend stays warm for up to 30 seconds, then exits.
 
 Budgets: 512 MiB decoded RAM cache, 96 MiB WebGL texture cache, 64 MiB initial audio cache. Only one frame can be in transit until the renderer acknowledges it; a slow WebView keeps only the latest pending decoded frame.
 

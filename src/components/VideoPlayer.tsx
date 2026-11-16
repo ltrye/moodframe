@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Channel } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useIsPresent } from 'framer-motion';
@@ -22,7 +22,8 @@ function IconButton({ icon, label, onClick, disabled = false, primary = false, p
 }
 
 /** All player UI and frame rendering live in the Tauri WebView. */
-export default function VideoPlayer({ filePath }: { filePath: string; onClose: () => void }) {
+export interface VideoPlayerHandle { pause: () => Promise<unknown>; }
+export default forwardRef<VideoPlayerHandle, { filePath: string; onClose: () => void }>(function VideoPlayer({ filePath }, ref) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const present = useIsPresent();
   const [state, setState] = useState<MediaState>(initialState);
@@ -35,6 +36,7 @@ export default function VideoPlayer({ filePath }: { filePath: string; onClose: (
   const rightDrag = useRef<{ x: number; frame: number } | null>(null);
   const lastVolume = useRef(.25);
   const send = useRef<(control: string, value?: number | boolean) => Promise<unknown>>(() => Promise.resolve());
+  useImperativeHandle(ref, () => ({ pause: () => send.current('pause') }), []);
 
   useEffect(() => {
     const element = canvas.current;
@@ -147,4 +149,4 @@ export default function VideoPlayer({ filePath }: { filePath: string; onClose: (
       </div>
     </div>
   </section>;
-}
+});

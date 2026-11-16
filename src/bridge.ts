@@ -15,7 +15,7 @@ const call = (action: string, keys: string[] = []) => (...values: unknown[]) =>
 const methods: Record<string, string[]> = {
   getWindowPrefs: [], setAlwaysOnTop: ['value'], setToggleShortcut: ['accel'],
   minimizeWindow: [], maximizeToggle: [], closeWindow: [],
-  openFolderDialog: [], openImageDialog: [],
+  openFolderDialog: [], openImageDialog: [], openWithDefaultApp: ['filePath'],
   readImageFiles: ['folderPath'], scanFolder: ['folderPath'], getFirstMedia: ['folderPath'],
   readSidecar: ['folderPath'], writeSidecar: ['folderPath', 'order'],
   getThumbnail: ['filePath'],

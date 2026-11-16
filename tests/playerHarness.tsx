@@ -6,7 +6,7 @@ import '../src/styles/global.css';
 
 const callbacks = new Map<number, (value: unknown) => void>();
 const listeners = new Map<number, string>();
-let sequence = 0, active = '', channel = 0, channelIndex = 0;
+let sequence = 0, active = '', channel = 0, channelIndex = 0, externalFailure = '';
 const commands: Record<string, unknown>[] = [];
 let state = { session: '', event: 'state', loaded: true, playing: false, frame: 0, frameCount: 72, fps: 24, aspect: 16/9, fileName: 'Animation reference.mp4', status: '640 × 360 · 24.00 fps', error: '', volume: .25, loop: true, cacheMiB: 42, ranges: [{ start: 0, end: 30 }, { start: 44, end: 71 }] };
 function emit() { for (const [id, event] of listeners) if (event === 'moodframe-media') callbacks.get(id)?.({ event, id, payload: { ...state } }); }
@@ -43,6 +43,10 @@ async function frame() {
     if (command !== 'request') return;
     const { action, args: value } = args;
     commands.push({ action, ...value, frames: undefined });
+    if (action === 'openWithDefaultApp') {
+      if (externalFailure) throw new Error(externalFailure);
+      return;
+    }
     if (action === 'openVideo') {
       active = value.session; state = { ...state, session: active, loaded: true, error: '' };
       channel = Number(value.frames.__TAURI_TO_IPC_KEY__().split(':')[1]); channelIndex = 0;
@@ -58,7 +62,7 @@ async function frame() {
     } else if (action === 'closeVideo' && value.session === active) active = '';
   }
 };
-(window as any).mediaTest = { commands, solidFrame, decodeFrame, FrameRenderer, error: (error: string) => { state.error = error; emit(); } };
+(window as any).mediaTest = { commands, solidFrame, decodeFrame, FrameRenderer, error: (error: string) => { state.error = error; emit(); }, failExternal: (error: string) => { externalFailure = error; } };
 function Harness() {
   const [visible, setVisible] = useState(true);
   return <><h1 style={{ padding: 20 }}>Moodframe</h1><ImageOverlay images={['asset://localhost/reference.mp4']} filePaths={['D:/reference.mp4']} index={visible ? 0 : null} onClose={() => setVisible(false)} onNavigate={() => {}} /></>;
